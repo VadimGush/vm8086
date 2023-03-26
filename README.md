@@ -1,5 +1,5 @@
 # vm8086
-Intel 8086 instructions decoder. Works only on Unix systems (following Single Unix Specification v3).
+Intel 8086 instructions decoder. Works only on Unix systems (Single Unix Specification v3).
 
 ## Usage
 ```bash
