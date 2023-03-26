@@ -64,9 +64,9 @@ enum class Instruction {
     MOVE,
 };
 
-enum class OperationMode {
-    BYTE_DATA,
-    WORD_DATA,
+enum class OperationMode : u8 {
+    BYTE_DATA           = 0b00000000,
+    WORD_DATA           = 0b00000001,
 };
 
 enum class MemoryMode : u8 {
@@ -105,17 +105,8 @@ int decode_instruction(decoder_state& state, u8 byte) {
     if ((byte >> 2) == 0b00100010) {
         state.state = State::READ_ARGUMENTS;
         state.instruction = Instruction::MOVE;
-        if (byte & 0b00000001) {
-            state.operation_mode = OperationMode::WORD_DATA;
-        } else {
-            state.operation_mode = OperationMode::BYTE_DATA;
-        }
-
-        if (byte & 0b00000010) {
-            state.reg_field_dest = true;
-        } else {
-            state.reg_field_dest = false;
-        }
+        state.operation_mode = static_cast<OperationMode>(byte & 0b00000001);
+        state.reg_field_dest = (byte & 0b00000010) ? true : false;
         return 0;
     }
     return 1;
