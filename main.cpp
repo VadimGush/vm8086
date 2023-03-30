@@ -1,3 +1,18 @@
+/**
+
+NOTE:
+
+This was an experiment to write an instruction decoder which is able
+to switch between decoding multiple streams of instructions on the fly.
+
+It is capable of basically switching between decoding one byte in one instruction
+stream, to decoding another byte in another instruction stream. The result:
+code is overly complicated and requires saving/reading state of the current
+decoding process all the time on every byte read.
+
+BAD IDEA. DO NOT IMPLEMENT DECODERS LIKE THIS.
+
+*/
 #define READ_BUFFER_SIZE 1024
 
 #include <memory>
@@ -37,7 +52,7 @@ enum class Result {
 
 const static char* errors[] = {
     "Instruction decoding failure: unknown instruction",
-    "Execution failure: unknown is not supported for execution",
+    "Execution failure: instruction is not supported for execution",
     "Arguments decoding failure: instruction not supported",
     "Arguments decoding failure: wrong decoder position",
 };
@@ -184,6 +199,38 @@ struct decoder_state {
 
 namespace mov {
 
+    Result decode_memory_mode(decoder_state& decoder_state, const u8 byte) {
+        mov::state& state = decoder_state.mov;
+
+        // Read REG, R/M fields
+        const u8 reg = (byte >> 3) & 0b00000111;
+        state.register_memory = static_cast<mov::RegisterMemory>(byte & 0b00000111);
+        state.memory_mode = static_cast<mov::MemoryMode>(byte >> 6);
+        state.displacement = 0;
+
+        switch (state.reg_field_mode) {
+            case (mov::RegFieldMode::DESTINATION): {
+                state.dst_register = reg;
+                break;
+            }
+            case (mov::RegFieldMode::SOURCE): {
+                state.src_register = reg;
+                break;
+            }
+        }
+
+        // If we have memory mode with no displacement
+        // and it is not the case when MOD = 00 and R/M = 110
+        // we should just complete an instruction
+        if (state.memory_mode == MemoryMode::MEMORY_MODE) {
+            if (state.register_memory != mov::RegisterMemory::BP) {
+                decoder_state.complete = true;
+            }
+        }
+
+        return Result::SUCCESS;
+    }
+
     Result decode_mod_reg_rm(decoder_state& decoder_state, const u8 byte) {
         mov::state& state = decoder_state.mov;
 
@@ -195,7 +242,7 @@ namespace mov {
 
             // In case of register mode (when we're only moving data between registers)
             // we need to just get the registers themselfs and nothing more 
-            case (mov::MemoryMode::REGISTER_MODE): {
+            case mov::MemoryMode::REGISTER_MODE: {
                 // Read REG, R/M fields
                 const u8 reg = (byte >> 3) & 0b00000111;
                 const u8 rmf = byte & 0b00000111;
@@ -220,30 +267,14 @@ namespace mov {
 
             // In case of memory mode (we're moving to/from register to/from memory)
             // we need to understand if we need to read a displacement
-            case (mov::MemoryMode::MEMORY_MODE): {
-                // Read REG, R/M fields
-                const u8 reg = (byte >> 3) & 0b00000111;
-                state.register_memory = static_cast<mov::RegisterMemory>(byte & 0b00000111);
-                state.memory_mode = static_cast<mov::MemoryMode>(byte >> 6);
-
-                switch (state.reg_field_mode) {
-                    case (mov::RegFieldMode::DESTINATION): {
-                        state.dst_register = reg;
-                        break;
-                    }
-                    case (mov::RegFieldMode::SOURCE): {
-                        state.src_register = reg;
-                        break;
-                    }
-                }
-
-                // If we have memory mode with no displacement
-                // and it is not the case when MOD = 00 and R/M = 110
-                // we should just complete an instruction
-                if (state.register_memory != mov::RegisterMemory::BP) {
-                    decoder_state.complete = true;
-                }
-                return Result::SUCCESS;
+            case mov::MemoryMode::MEMORY_MODE: {
+                return decode_memory_mode(decoder_state, byte);
+            }
+            case mov::MemoryMode::MEMORY_MODE_8_BIT: {
+                return decode_memory_mode(decoder_state, byte);
+            }
+            case mov::MemoryMode::MEMORY_MODE_16_BIT: {
+                return decode_memory_mode(decoder_state, byte);
             }
             default: {}
         }
@@ -254,9 +285,7 @@ namespace mov {
     Result decode_low_disp(decoder_state& decoder_state, const u8 byte) {
         mov::state& state = decoder_state.mov;
 
-        const u16 low_d = static_cast<u16>(byte);
-        state.displacement = (state.displacement & 0xFF00) | low_d;
-
+        state.displacement = static_cast<u16>(byte);
 
         return Result::SUCCESS;
     }
@@ -273,8 +302,7 @@ namespace mov {
     Result decode_low_data(decoder_state& decoder_state, const u8 byte) {
         mov::state& state = decoder_state.mov;
 
-        const u16 low_d = static_cast<u16>(byte);
-        state.data = (state.data & 0xFF00) | (low_d);
+        state.data = static_cast<u16>(byte);
 
         return Result::SUCCESS;
     }
@@ -382,27 +410,110 @@ namespace mov {
         "ax", "cx", "dx", "bx", "sp", "bp", "si", "di"
     };
 
+    const static char* register_memory_names[] = {
+        "bx + si", "bx + di", "bp + si", "bp + di", "si", "di", "bp", "bx"
+    };
+
+    void execute_memory_mode(
+        const decoder_state& decoder_state,
+        const char* dst_register_name,
+        const char* src_register_name) {
+        const state& state = decoder_state.mov;
+
+        const u8 pattern_id = static_cast<u8>(state.register_memory);
+        const char* pattern = register_memory_names[pattern_id];
+        const int disp = static_cast<int>(state.displacement);
+
+        switch (state.reg_field_mode) {
+            case RegFieldMode::DESTINATION: {
+                cout << dst_register_name << ", [";
+                if (disp != 0) {
+                    cout << pattern << " + " << disp << "]";
+                } else {
+                    cout << pattern << "]";
+                }
+                break;
+            }
+            case RegFieldMode::SOURCE: {
+                if (disp != 0) {
+                    cout << "[" << pattern << " + " << disp <<  "], ";
+                } else {
+                    cout << "[" << pattern <<  "], ";
+                }
+                cout << src_register_name;
+                break;
+            }
+        }
+    }
+
     Result execute_register_memory_to_from_register(const decoder_state& decoder_state) {
         const state& state = decoder_state.mov;
 
+        const char* dst_register_name;
+        const char* src_register_name;
+        switch (state.operation_mode) {
+
+            case OperationMode::BYTE_DATA: {
+                dst_register_name = register_names_w0[state.dst_register];
+                src_register_name = register_names_w0[state.src_register];
+                break;
+            }
+
+            case OperationMode::WORD_DATA: {
+                dst_register_name = register_names_w1[state.dst_register];
+                src_register_name = register_names_w1[state.src_register];
+                break;
+            }
+        }
+
+
         switch (state.memory_mode) {
-            case (mov::MemoryMode::REGISTER_MODE): {
+
+            case mov::MemoryMode::REGISTER_MODE: {
                 cout << "mov ";
-                switch (state.operation_mode) {
-                    case (mov::OperationMode::BYTE_DATA): {
-                        cout << register_names_w0[state.dst_register] << ", ";
-                        cout << register_names_w0[state.src_register];
-                        break;
+                cout << dst_register_name << ", ";
+                cout << src_register_name;
+                cout << endl;
+                break;
+            }
+
+            case mov::MemoryMode::MEMORY_MODE: {
+                cout << "mov ";
+                if (state.register_memory == RegisterMemory::BP) {
+                    // direct address
+                    switch (state.reg_field_mode) {
+                        case RegFieldMode::DESTINATION: {
+                            cout << dst_register_name << ", [";
+                            cout << state.displacement << "]";
+                            break;
+                        }
+                        case RegFieldMode::SOURCE: {
+                            cout << "[" << state.displacement << "], ";
+                            cout << src_register_name;
+                            break;
+                        }
                     }
-                    case (mov::OperationMode::WORD_DATA): {
-                        cout << register_names_w1[state.dst_register] << ", ";
-                        cout << register_names_w1[state.src_register];
-                        break;
-                    }
+                } else {
+                    execute_memory_mode(decoder_state, dst_register_name, src_register_name);
                 }
                 cout << endl;
                 break;
             }
+
+            case mov::MemoryMode::MEMORY_MODE_8_BIT: {
+                cout << "mov ";
+                execute_memory_mode(decoder_state, dst_register_name, src_register_name);
+                cout << endl;
+                break;
+            }
+
+            case mov::MemoryMode::MEMORY_MODE_16_BIT: {
+                cout << "mov ";
+                execute_memory_mode(decoder_state, dst_register_name, src_register_name);
+                cout << endl;
+                break;
+            }
+
             default: {
                 return Result::ERROR_EXECUTE_UNSUPPORTED_INSTRUCTION;
             }
