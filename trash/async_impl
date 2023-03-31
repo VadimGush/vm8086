@@ -59,7 +59,7 @@ const static char* errors[] = {
 
 struct data_block {
     u8 buffer[READ_BUFFER_SIZE];
-    // TODO: this might result in stack overflow 
+    // TODO: this might result in stack overflow
     unique_ptr<data_block> next;
 };
 
@@ -173,7 +173,7 @@ enum class Instruction {
 
 /**
 * Represents the state of the instruction decoder. When the current instruction
-* is decoded, the flag "complete" will be set to "true", which means that 
+* is decoded, the flag "complete" will be set to "true", which means that
 * instruction is ready to be executed.
 */
 struct decoder_state {
@@ -237,11 +237,11 @@ namespace mov {
         // The way we decode REG and R/M fields depends on what
         // data we have in MOD field. So we will decode it first.
         state.memory_mode = static_cast<mov::MemoryMode>(byte >> 6);
-        
+
         switch (state.memory_mode) {
 
             // In case of register mode (when we're only moving data between registers)
-            // we need to just get the registers themselfs and nothing more 
+            // we need to just get the registers themselfs and nothing more
             case mov::MemoryMode::REGISTER_MODE: {
                 // Read REG, R/M fields
                 const u8 reg = (byte >> 3) & 0b00000111;
@@ -324,7 +324,7 @@ namespace mov {
             case Type::REGISTER_MEMORY_TO_FROM_REGISTER: {
                 switch (decoder_state.instruction_pos) {
                     case 1: {
-                        return decode_mod_reg_rm(decoder_state, byte); 
+                        return decode_mod_reg_rm(decoder_state, byte);
                     }
                     case 2: {
                         const Result result = decode_low_disp(decoder_state, byte);
@@ -382,7 +382,7 @@ namespace mov {
             mov::state& state = decoder_state.mov;
             state.type = Type::REGISTER_MEMORY_TO_FROM_REGISTER;
             state.operation_mode = static_cast<OperationMode>(byte & 0b00000001);
-            state.reg_field_mode = (byte & 0b00000010) ? 
+            state.reg_field_mode = (byte & 0b00000010) ?
                     mov::RegFieldMode::DESTINATION : mov::RegFieldMode::SOURCE;
             return true;
         }
@@ -635,12 +635,12 @@ Result decode(const vector<u8>& data) {
         // which byte is considered to be part of instruction
         // and which one part of arguments is up to the decoding code.
         switch (decoder.state) {
-            case (State::READ_INSTRUCTION): { 
+            case (State::READ_INSTRUCTION): {
                 result = decode_instruction(decoder, byte);
                 break;
             }
-            case (State::READ_ARGUMENTS): { 
-                result = decode_arguments(decoder, byte); 
+            case (State::READ_ARGUMENTS): {
+                result = decode_arguments(decoder, byte);
                 break;
             }
         }
@@ -662,7 +662,6 @@ Result decode(const vector<u8>& data) {
 }
 
 int main() {
-
     vector<u8> data = read_data();
     cout << "read: " << data.size() << " bytes" << endl << endl;
 
@@ -672,6 +671,7 @@ int main() {
         const int error_message_id = static_cast<int>(result);
         cerr << errors[error_message_id] << endl;
     }
-
     return 0;
 }
+
+return 0;
