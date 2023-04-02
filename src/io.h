@@ -11,6 +11,9 @@
 
 namespace io {
 
+    /**
+     * Represents stream of encoded instructions.
+     */
     struct input_stream {
         u8 buffer[BUFFER_SIZE];
         size_t buffer_pos = BUFFER_SIZE;
@@ -18,8 +21,11 @@ namespace io {
         size_t pos = 0;
 
         u8 byte();
+
         void next();
-        u8 next_byte();
+
+        u8 read_byte();
+
         bool complete() const;
     };
 

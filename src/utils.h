@@ -13,7 +13,14 @@ using u16 = unsigned short;
 using u32 = unsigned int;
 using u64 = unsigned long;
 
+using i8 = char;
+using i16 = short;
+using i32 = int;
+using i64 = long;
+using fd_t = int;
+
 namespace bit {
+
     constexpr u8 LOW_1BIT = 0b00000001;
     constexpr u8 LOW_2BIT = 0b00000011;
     constexpr u8 LOW_3BIT = 0b00000111;
@@ -26,6 +33,11 @@ namespace bit {
 
     u16 combine(u8 high, u8 low);
 
+    template <typename O, typename I>
+    O reinterpret(const I& value) {
+        return *reinterpret_cast<const O*>(&value);
+    }
+
     template <typename O>
     void print_bits(O& out, const u8 byte) {
         for (size_t i = 0; i < 8; i++) {
@@ -34,13 +46,6 @@ namespace bit {
         }
     }
 }
-
-using i8 = char;
-using i16 = short;
-using i32 = int;
-using i64 = long;
-
-using fd_t = int;
 
 template <typename T>
 using vec = std::vector<T>;

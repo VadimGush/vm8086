@@ -16,7 +16,7 @@ u8 io::input_stream::byte() {
     return buffer[buffer_pos];
 }
 
-u8 io::input_stream::next_byte() {
+u8 io::input_stream::read_byte() {
     next();
     return byte();
 }
