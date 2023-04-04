@@ -16,18 +16,18 @@
 
 bits 16
 
-add bx, [bx+si]
+add bx, [bx + si]
 add bx, [bp]
 add si, 2
 add bp, 2
 add cx, 8
-add bx, [bp + 0]
+add bx, [bp]
 add cx, [bx + 2]
 add bh, [bp + si + 4]
 add di, [bp + di + 6]
-add [bx+si], bx
+add [bx + si], bx
 add [bp], bx
-add [bp + 0], bx
+add [bp], bx
 add [bx + 2], cx
 add [bp + si + 4], bh
 add [bp + di + 6], di
@@ -71,13 +71,13 @@ cmp bx, [bp]
 cmp si, 2
 cmp bp, 2
 cmp cx, 8
-cmp bx, [bp + 0]
+cmp bx, [bp]
 cmp cx, [bx + 2]
 cmp bh, [bp + si + 4]
 cmp di, [bp + di + 6]
-cmp [bx+si], bx
+cmp [bx + si], bx
 cmp [bp], bx
-cmp [bp + 0], bx
+cmp [bp], bx
 cmp [bx + 2], cx
 cmp [bp + si + 4], bh
 cmp [bp + di + 6], di

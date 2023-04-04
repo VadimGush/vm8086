@@ -24,7 +24,7 @@ namespace io {
 
         void next();
 
-        u8 read_byte();
+        u8 next_byte();
 
         bool complete() const;
     };
