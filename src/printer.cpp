@@ -78,3 +78,13 @@ void printer::print_instr_str_int_int(const char* instr, const char* arg1, const
     print_arg_str_int(arg1, addr);
     std::cout << ", " << data << "\n";
 }
+
+// <instr> <data: int>
+void printer::print_instr_int(const char* const instr, const i32 data) {
+    std::cout << instr << " " << data << "\n";
+}
+
+// <instr> <arg1: str>
+void printer::print_instr_str(const char* const instr, const char* const arg1) {
+    std::cout << instr << " " << arg1 << "\n";
+}

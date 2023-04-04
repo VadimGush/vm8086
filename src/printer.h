@@ -26,6 +26,12 @@ namespace printer {
     // <instr> [<arg1: str> + <addr: int>], <data: int>
     void print_instr_str_int_int(const char* instr, const char* arg1, i32 addr, i32 data);
 
+    // <instr> <data: int>
+    void print_instr_int(const char* instr, i32 data);
+
+    // <instr> <arg1: str>
+    void print_instr_str(const char* instr, const char* arg1);
+
     const char* get_register_name(bool word_data, u8 reg);
 
     const char* get_register_pattern(u8 pattern);

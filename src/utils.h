@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <memory>
+#include <map>
+#include <string>
 
 using u8 = unsigned char;
 using u16 = unsigned short;
@@ -52,5 +54,10 @@ using vec = std::vector<T>;
 
 template <typename T>
 using uptr = std::unique_ptr<T>;
+
+template <typename K, typename V>
+using umap = std::unordered_map<K, V>;
+
+using str = std::string;
 
 #endif //VM8086_UTILS_H

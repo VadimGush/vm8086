@@ -5,7 +5,20 @@
 #include "decoder.h"
 #include "printer.h"
 #include <iostream>
+#include <sstream>
 using namespace decoder;
+
+static umap<i32, str> labels{};
+
+const char* get_label(const io::input_stream& is, const i32 displacement) {
+    const i32 pos = static_cast<i32>(is.pos) + displacement;
+    if (!labels.contains(pos)) {
+        std::stringstream ss{};
+        ss << "label_" << labels.size();
+        labels.emplace(pos, ss.str());
+    }
+    return labels.at(pos).c_str();
+}
 
 // [ data low ] [ data high ]
 i32 decode_signed_data(const bool word_data, io::input_stream& is) {
@@ -200,7 +213,7 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
     if ((byte >> 1) == 0b00000010) {
         const bool word = byte & bit::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
-        printer::print_instr_str_int("add", "ax", data);
+        printer::print_instr_str_int("add", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
     }
 
@@ -208,7 +221,7 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
     if ((byte >> 1) == 0b00010110) {
         const bool word = byte & bit::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
-        printer::print_instr_str_int("sub", "ax", data);
+        printer::print_instr_str_int("sub", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
     }
 
@@ -216,7 +229,7 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
     if ((byte >> 1) == 0b00011110) {
         const bool word = byte & bit::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
-        printer::print_instr_str_int("cmp", "ax", data);
+        printer::print_instr_str_int("cmp", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
     }
 
@@ -238,6 +251,146 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
         if (mrr.reg == 0b00000101) return decode_mod_opcode_rm_disp_data(is, mrr, "sub", sign, word);
         // CMP - immediate with register/memory
         if (mrr.reg == 0b00000111) return decode_mod_opcode_rm_disp_data(is, mrr, "cmp", sign, word);
+    }
+
+    // JE/JZ - jump on equal zero
+    if (byte == 0b01110100) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("je", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JL/JNGE - jump on less/not greater or equal
+    if (byte == 0b01111100) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jl", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JLE/JNG - jump on less or equal/not greater
+    if (byte == 0b01111110) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jle", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JB/JNAE - jump on below/not above or equal
+    if (byte == 0b01110010) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jb", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JBE/JNA - jump on below or equal/not above
+    if (byte == 0b01110110) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jbe", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JP/JPE - jump on parity/parity even
+    if (byte == 0b01111010) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jp", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JO - jump on overflow
+    if (byte == 0b01110000) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jo", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JS - jump on sign
+    if (byte == 0b01111000) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("js", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNE/JNZ - jump on not equal/not zero
+    if (byte == 0b01110101) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jne", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNL/JGE - jump on not less/greater or equal
+    if (byte == 0b01111101) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jnl", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNLE/JG - jump on not less or equal/greater
+    if (byte == 0b01111111) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jnle", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNB/JAE - jump on not below/above or equal
+    if (byte == 0b01110011) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jnb", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNBE/JA - jump on not below or equal/above
+    if (byte == 0b01110111) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jnbe", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNP/JPO - jump on not par/par odd
+    if (byte == 0b01111011) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jnp", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNO - jump on not overflow
+    if (byte == 0b01110001) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jno", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JNS - jump on not sign
+    if (byte == 0b01111001) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jns", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // LOOP - loop CX times
+    if (byte == 0b11100010) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("loop", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // LOOPZ/LOOPE - loop while zero/equal
+    if (byte == 0b11100001) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("loopz", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // LOOPNZ/LOOPNE - lopp while zero/equal
+    if (byte == 0b11100000) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("loopnz", get_label(is, label));
+        return decoder::DecodingError::NONE;
+    }
+
+    // JCXZ - jump on CX zero
+    if (byte == 0b11100011) {
+        const i32 label = static_cast<i32>(decode_signed_data(false, is));
+        printer::print_instr_str("jcxz", get_label(is, label));
+        return decoder::DecodingError::NONE;
     }
 
     return decoder::DecodingError::UNKNOWN_INSTRUCTION;
