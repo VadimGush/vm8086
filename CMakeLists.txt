@@ -3,4 +3,5 @@ project(vm8086)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(vm8086 src/main.cpp src/utils.h src/io.h src/io.cpp src/utils.cpp src/decoder.h src/decoder.cpp src/printer.h src/printer.cpp)
+include_directories(utilities/include)
+add_executable(vm8086 source/main.cpp source/io.h source/io.cpp source/decoder.h source/decoder.cpp source/printer.h source/printer.cpp)

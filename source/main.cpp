@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <utils/bits.h>
 
 #include "decoder.h"
 #include "io.h"
@@ -16,7 +17,7 @@ int main() {
         const char* error_message = decoder::decoding_error_message[static_cast<int>(error)];
         cerr << "\nError: " << error_message << endl;
         cerr << "Decoding failed on: byte = ";
-        bit::print_bits(cerr, is.byte());
+        bits::print_bits(cerr, is.byte());
         cerr << ", position = " << is.pos << "\n";
         return 1;
     }

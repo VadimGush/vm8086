@@ -6,6 +6,8 @@
 #include "printer.h"
 #include <iostream>
 #include <sstream>
+#include <utils/collections.h>
+#include <utils/bits.h>
 using namespace decoder;
 
 static umap<i32, str> labels{};
@@ -25,10 +27,10 @@ i32 decode_signed_data(const bool word_data, io::input_stream& is) {
     if (word_data) {
         const u8 low = is.next_byte();
         const u8 high = is.next_byte();
-        return bit::reinterpret<i16>(bit::combine(high, low));
+        return bits::reinterpret<i16>(bits::combine(high, low));
     } else {
         const u8 low = is.next_byte();
-        return bit::reinterpret<i8>(low);
+        return bits::reinterpret<i8>(low);
     }
 }
 
@@ -37,7 +39,7 @@ u32 decode_unsigned_data(const bool word_data, io::input_stream& is) {
     if (word_data) {
         const u8 low = is.next_byte();
         const u8 high = is.next_byte();
-        return bit::combine(high, low);
+        return bits::combine(high, low);
     } else {
         return is.next_byte();
     }
@@ -48,8 +50,8 @@ mod_reg_rm decode_mod_reg_rm(io::input_stream& is) {
     const u8 byte = is.next_byte();
     return mod_reg_rm {
             .mod = static_cast<MemoryMode>(byte >> 6),
-            .reg = static_cast<u8>((byte >> 3) & bit::LOW_3BIT),
-            .rm = static_cast<u8>(byte & bit::LOW_3BIT)
+            .reg = static_cast<u8>((byte >> 3) & bits::LOW_3BIT),
+            .rm = static_cast<u8>(byte & bits::LOW_3BIT)
     };
 }
 
@@ -179,17 +181,20 @@ decoder::DecodingError decode_mod_opcode_rm_disp_data(io::input_stream& is,
 decoder::DecodingError decoder::decode(io::input_stream& is) {
     const u8 byte = is.byte();
 
+    // TODO: brute-forcing the first byte until we get an instruction is not a good solution
+    //       we want to know which instructions we should check after we read the very first bit
+
     // MOV - register/memory to/from register
     if ((byte >> 2) == 0b00100010) {
-        const bool reg_dest = (byte >> 1) & bit::LOW_1BIT;
-        const bool word = byte & bit::LOW_1BIT;
+        const bool reg_dest = (byte >> 1) & bits::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         return decode_mod_reg_rm_disp(is, "mov", reg_dest, word);
     }
 
     // MOV - immediate to register
     if ((byte >> 4) == 0b00001011) {
-        const bool word = ((byte >> 3) & bit::LOW_1BIT) != 0;
-        const char* reg = printer::get_register_name(word, byte & bit::LOW_3BIT);
+        const bool word = ((byte >> 3) & bits::LOW_1BIT) != 0;
+        const char* reg = printer::get_register_name(word, byte & bits::LOW_3BIT);
         const i32 data = decode_signed_data(word, is);
         printer::print_instr_str_int("mov", reg, data);
         return decoder::DecodingError::NONE;
@@ -197,21 +202,21 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
 
     // ADD - reg/memory with register to either
     if ((byte >> 2) == 0) {
-        const bool reg_dest = (byte >> 1) & bit::LOW_1BIT;
-        const bool word = byte & bit::LOW_1BIT;
+        const bool reg_dest = (byte >> 1) & bits::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         return decode_mod_reg_rm_disp(is, "add", reg_dest, word);
     }
 
     // CMP - reg/memory with register to either
     if ((byte >> 2) == 0b00001110) {
-        const bool reg_dest = (byte >> 1) & bit::LOW_1BIT;
-        const bool word = byte & bit::LOW_1BIT;
+        const bool reg_dest = (byte >> 1) & bits::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         return decode_mod_reg_rm_disp(is, "cmp", reg_dest, word);
     }
 
     // ADD - immediate to accumulator
     if ((byte >> 1) == 0b00000010) {
-        const bool word = byte & bit::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
         printer::print_instr_str_int("add", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
@@ -219,7 +224,7 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
 
     // SUB - immediate from accumulator
     if ((byte >> 1) == 0b00010110) {
-        const bool word = byte & bit::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
         printer::print_instr_str_int("sub", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
@@ -227,7 +232,7 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
 
     // CMP - immediate with accumulator
     if ((byte >> 1) == 0b00011110) {
-        const bool word = byte & bit::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         const i32 data = decode_signed_data(word, is);
         printer::print_instr_str_int("cmp", printer::get_register_name(word, 0), data);
         return decoder::DecodingError::NONE;
@@ -235,14 +240,14 @@ decoder::DecodingError decoder::decode(io::input_stream& is) {
 
     // SUB - reg/memory and register to either
     if ((byte >> 2) == 0b00001010) {
-        const bool reg_dest = (byte >> 1) & bit::LOW_1BIT;
-        const bool word = byte & bit::LOW_1BIT;
+        const bool reg_dest = (byte >> 1) & bits::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         return decode_mod_reg_rm_disp(is, "sub", reg_dest, word);
     }
 
     if ((byte >> 2) == 0b00100000) {
-        const bool sign = (byte >> 1) & bit::LOW_1BIT;
-        const bool word = byte & bit::LOW_1BIT;
+        const bool sign = (byte >> 1) & bits::LOW_1BIT;
+        const bool word = byte & bits::LOW_1BIT;
         const mod_reg_rm mrr = decode_mod_reg_rm(is);
 
         // ADD - immediate to register/memory

@@ -5,7 +5,7 @@
 #ifndef VM8086_PRINTER_H
 #define VM8086_PRINTER_H
 
-#include "utils.h"
+#include <utils/types.h>
 #include "io.h"
 
 // Ha-ha, funny name ;D

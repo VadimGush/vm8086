@@ -5,7 +5,7 @@
 #ifndef VM8086_DECODER_H
 #define VM8086_DECODER_H
 
-#include "utils.h"
+#include <utils/types.h>
 #include "io.h"
 
 namespace decoder {
